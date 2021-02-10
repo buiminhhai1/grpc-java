@@ -1,0 +1,57 @@
+{
+  "id": "",
+  "brand": "Lenovo",
+  "name": "Thinkpad X1",
+  "cpu": {
+    "brand": "AMD",
+    "name": "7 PRO",
+    "number_cores": 5,
+    "number_threads": 5,
+    "min_ghz": 3.459552447579828,
+    "max_ghz": 4.8615036850676
+  },
+  "memory": {
+    "value": "20",
+    "unit": "GIGABYTE"
+  },
+  "gpu": [{
+    "brand": "NVIDIA",
+    "name": "GTX 1550-Ti",
+    "min_ghz": 1.1641117916388724,
+    "max_ghz": 1.8410630615926122,
+    "memory": {
+      "value": "2",
+      "unit": "GIGABYTE"
+    }
+  }],
+  "storage": [{
+    "driver": "SSD",
+    "memory": {
+      "value": "990",
+      "unit": "GIGABYTE"
+    }
+  }, {
+    "driver": "HDD",
+    "memory": {
+      "value": "7288",
+      "unit": "TERABYTE"
+    }
+  }],
+  "screen": {
+    "size_inch": 15.821739,
+    "resolution": {
+      "width": 7050,
+      "height": 3966
+    },
+    "panel": "OLED",
+    "multitouch": true
+  },
+  "keyboard": {
+    "layout": "QWERTZ",
+    "backlit": false
+  },
+  "weight_kg": 2.778958358515961,
+  "price_usd": 2654.8439716353078,
+  "release_year": 2017,
+  "updated_at": "2021-02-10T14:17:55.716Z"
+}
