@@ -21,8 +21,6 @@ dependencies {
     // https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java-util
     compile group: 'com.google.protobuf', name: 'protobuf-java-util', version: '4.0.0-rc-2'
 
-
-
     // https://mvnrepository.com/artifact/io.grpc/grpc-all
     compile group: 'io.grpc', name: 'grpc-all', version: '1.25.0'
 }
