@@ -23,6 +23,9 @@ dependencies {
 
     // https://mvnrepository.com/artifact/io.grpc/grpc-all
     compile group: 'io.grpc', name: 'grpc-all', version: '1.25.0'
+
+    // https://mvnrepository.com/artifact/io.grpc/grpc-services
+    compile group: 'io.grpc', name: 'grpc-services', version: '1.28.0'
 }
 
 sourceSets {
