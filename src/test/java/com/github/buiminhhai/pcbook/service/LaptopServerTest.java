@@ -1,19 +1,20 @@
 package com.github.buiminhhai.pcbook.service;
 
-import com.github.buiminhhai.pcbook.pb.CreateLaptopRequest;
-import com.github.buiminhhai.pcbook.pb.CreateLaptopResponse;
-import com.github.buiminhhai.pcbook.pb.Laptop;
-import com.github.buiminhhai.pcbook.pb.LaptopServiceGrpc;
+import com.github.buiminhhai.pcbook.pb.*;
 import com.github.buiminhhai.pcbook.sample.Generator;
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
+import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -22,7 +23,10 @@ public class LaptopServerTest {
     @Rule
     public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule(); // automatic graceful shutdown channel at the end of test
 
-    private LaptopStore store;
+    private LaptopStore laptopStore;
+    private ImageStore imageStore;
+    private RatingStore ratingStore;
+
     private LaptopServer server;
     private ManagedChannel channel;
 
@@ -31,8 +35,10 @@ public class LaptopServerTest {
         String serverName = InProcessServerBuilder.generateName();
         InProcessServerBuilder serverBuilder = InProcessServerBuilder.forName(serverName).directExecutor();
 
-        store = new InMemoryLaptopStore();
-        server = new LaptopServer(serverBuilder, 0, store);
+        laptopStore = new InMemoryLaptopStore();
+        imageStore = new DiskImageStore("img");
+        ratingStore = new InMemoryRatingStore();
+        server = new LaptopServer(serverBuilder, 0, laptopStore, imageStore, ratingStore);
         server.start();
 
         channel = InProcessChannelBuilder.forName(serverName).directExecutor().build();
@@ -54,7 +60,7 @@ public class LaptopServerTest {
         assertNotNull(response);
         assertEquals(laptop.getId(), response.getId());
 
-        Laptop found = store.Find(response.getId());
+        Laptop found = laptopStore.Find(response.getId());
         assertNotNull(found);
     }
 
@@ -69,7 +75,7 @@ public class LaptopServerTest {
         assertNotNull(response);
         assertFalse(response.getId().isEmpty());
 
-        Laptop found = store.Find(response.getId());
+        Laptop found = laptopStore.Find(response.getId());
         assertNotNull(found);
     }
 
@@ -89,10 +95,72 @@ public class LaptopServerTest {
     public void createLaptopWithAlreadyExistsID() throws AlreadyExistsException, Exception {
         Generator generator = new Generator();
         Laptop laptop = generator.NewLaptop();
-        store.Save(laptop);
+        laptopStore.Save(laptop);
         CreateLaptopRequest request = CreateLaptopRequest.newBuilder().setLaptop(laptop).build();
 
         LaptopServiceGrpc.LaptopServiceBlockingStub stub = LaptopServiceGrpc.newBlockingStub(channel);
         CreateLaptopResponse response = stub.createLaptop(request);
+    }
+
+    @Test
+    public void rateLaptop() throws Exception, AlreadyExistsException {
+        Generator generator = new Generator();
+        Laptop laptop = generator.NewLaptop();
+        laptopStore.Save(laptop);
+
+        LaptopServiceGrpc.LaptopServiceStub stub = LaptopServiceGrpc.newStub(channel);
+        RateLaptopResponseStreamObserver responseObserver = new RateLaptopResponseStreamObserver();
+        StreamObserver<RateLaptopRequest> requestObserver = stub.rateLaptop(responseObserver);
+
+        double[] scores = {8, 7.5, 10};
+        double[] averages = {8, 7.75, 8.5};
+        int n = scores.length;
+
+        for (int i = 0; i < n; i++) {
+            RateLaptopRequest request = RateLaptopRequest.newBuilder()
+                    .setLaptopId(laptop.getId())
+                    .setScore(scores[i])
+                    .build();
+            requestObserver.onNext(request);
+        }
+        requestObserver.onCompleted();
+        assertNull(responseObserver.err);
+        assertTrue(responseObserver.completed);
+        assertEquals(n, responseObserver.responses.size());
+
+        int idx = 0;
+        for (RateLaptopResponse response : responseObserver.responses) {
+            assertEquals(laptop.getId(), response.getLaptopId());
+            assertEquals(idx + 1, response.getRatedCount());
+            assertEquals(averages[idx], response.getAverageScore(), 1e-9);
+            idx++;
+        }
+
+
+    }
+
+    private class RateLaptopResponseStreamObserver implements StreamObserver<RateLaptopResponse> {
+        public List<RateLaptopResponse> responses;
+        public Throwable err;
+        public boolean completed;
+
+        public RateLaptopResponseStreamObserver() {
+            responses = new LinkedList<>();
+        }
+
+        @Override
+        public void onNext(RateLaptopResponse response) {
+            responses.add(response);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            err = t;
+        }
+
+        @Override
+        public void onCompleted() {
+            completed = true;
+        }
     }
 }
